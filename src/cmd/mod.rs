@@ -13,7 +13,7 @@ mod logging;
 #[derive(Debug, Parser)]
 #[command(about = "ProxyParser is a tool to parse nginx and apache config files")]
 pub struct Cli {
-    #[arg(short, long)]
+    #[arg(short, long, default_value = "0")]
     pub verbose: Option<u8>,
 
     #[arg(short, long, help = "The path to the config files")]
