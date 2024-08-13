@@ -1,0 +1,14 @@
+[package]
+name = "proxyparser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.86"
+clap = { version = "4.5.15", features = ["derive", "unstable-doc"] }
+env_logger = "0.11.5"
+log = { version = "0.4.22", features = ["serde"] }
+misc-conf = "0.1.2"
+serde = { version = "1.0.207", features = ["derive"] }
+thiserror = "1.0.63"
+walkdir = "2.5.0"
