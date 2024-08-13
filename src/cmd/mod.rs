@@ -7,6 +7,7 @@ use misc_conf::apache::Apache;
 use crate::cmd::configs::ProxyConfig;
 
 pub mod configs;
+mod interact;
 mod logging;
 
 #[derive(Debug, Parser)]
@@ -25,6 +26,12 @@ pub struct Cli {
         default_value = "conf"
     )]
     pub extension: Option<String>,
+
+    #[arg(short, long, help = "Interactive mode")]
+    pub interactive: bool,
+
+    #[arg(short, long, help = "Print the config commands")]
+    pub print_commands: bool,
 }
 
 pub fn exec() {
@@ -39,6 +46,7 @@ pub fn exec() {
 
     use walkdir::WalkDir;
 
+    let mut configs = ProxyConfig::default();
     for entry in WalkDir::new(&starting_dir)
         .into_iter()
         .filter_map(Result::ok)
@@ -48,24 +56,43 @@ pub fn exec() {
             .extension()
             .map_or(false, |ext| ext == extension)
         {
-            process(entry.path().to_path_buf());
+            let pc = process(entry.path().to_path_buf());
+            pc.virtual_hosts.into_iter().for_each(|virtual_host| {
+                configs.add_virtual_host(virtual_host);
+            });
         }
+    }
+
+    // if args.interactive {
+    //     let _ = interact::exec(configs);
+    // }
+
+    if args.print_commands {
+        print_commands(configs);
     }
 }
 
-fn process(file_path: PathBuf) -> Vec<ProxyConfig> {
+fn process(file_path: PathBuf) -> ProxyConfig {
     info!("Processing file: {:?}", file_path);
     use misc_conf::ast::*;
 
     let data = std::fs::read(file_path).expect("unable to read file");
 
-    let mut configs = Vec::new();
+    let mut configs = ProxyConfig::default();
     if let Ok(res) = Directive::<Apache>::parse(&data) {
         for directive in res {
-            let virtual_host = ProxyConfig::from(directive);
-            configs.push(virtual_host);
+            let pc = ProxyConfig::from(directive);
+            pc.virtual_hosts.into_iter().for_each(|virtual_host| {
+                configs.add_virtual_host(virtual_host);
+            });
         }
     }
 
     configs
+}
+
+fn print_commands(configs: ProxyConfig) {
+    for virtual_host in configs.virtual_hosts {
+        println!("{}", virtual_host.to_etcd_config());
+    }
 }

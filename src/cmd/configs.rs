@@ -1,11 +1,36 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
+use log::debug;
 use misc_conf::{apache::Apache, ast::Directive};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ProxyConfig {
-    virtual_hosts: Vec<VirtualHost>,
+    pub virtual_hosts: Vec<VirtualHost>,
+    meta: HashMap<String, String>,
+}
+
+impl ProxyConfig {
+    pub fn add_virtual_host(&mut self, virtual_host: VirtualHost) {
+        self.virtual_hosts.push(virtual_host);
+    }
+
+    pub fn to_json(&self) -> Vec<serde_json::Value> {
+        self.virtual_hosts
+            .clone()
+            .into_iter()
+            .map(|virtual_host| virtual_host.into())
+            .collect()
+    }
+}
+
+impl Display for ProxyConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for virtual_host in &self.virtual_hosts {
+            writeln!(f, "Host: {}", virtual_host.host)?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -23,6 +48,57 @@ pub struct VirtualHost {
     headers: HashMap<String, Vec<String>>,
     listen: Vec<String>,
     log_level: String,
+}
+
+impl From<VirtualHost> for serde_json::Value {
+    fn from(virtual_host: VirtualHost) -> Self {
+        serde_json::to_value(virtual_host.server_name).unwrap()
+        // json!({
+        //     "host": virtual_host.host,
+        //     "server_name": virtual_host.server_name,
+        //     "server_aliases": virtual_host.server_aliases,
+        //     "document_root": virtual_host.document_root,
+        //     "custom_log": virtual_host.custom_log,
+        //     "locations": virtual_host.locations,
+        // })
+    }
+}
+
+impl VirtualHost {
+    pub fn to_etcd_config(&self) -> String {
+        let mut config = String::new();
+        debug!("VirtualHost: {:#?}", self);
+        if self.server_name.is_empty() {
+            return config;
+        }
+        let name = self.server_name.clone();
+        config.push_str(&format!(
+            "etcdctl put traefik/http/routers/{name}/rule \"Host(`{name}`)\"\n"
+        ));
+        config.push_str(&format!(
+            "etcdctl put traefik/http/routers/{name}/tls \"true\"\n"
+        ));
+        config.push_str(&format!(
+            "etcdctl put traefik/http/routers/{name}/entryPoints/0 websecure\n"
+        ));
+        for rewrite_rule in &self.rewrite_rules {
+            config.push_str(&format!(
+                "etcdctl put traefik/http/routers/{name}/rule \"{}\"\n",
+                rewrite_rule.replacement
+            ));
+        }
+        config.push_str(&format!(
+            "etcdctl put traefik/http/services/{name}/loadbalancer/servers/0/url \"{}\"\n",
+            self.host,
+        ));
+        config
+    }
+}
+
+impl Display for VirtualHost {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", serde_json::to_string(&self).unwrap())
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -56,7 +132,12 @@ impl From<Directive<Apache>> for ProxyConfig {
                 let virtual_host = VirtualHost::from(directive);
                 pc.virtual_hosts.push(virtual_host);
             }
-            _ => {}
+            other => {
+                pc.meta.insert(
+                    other.to_string(),
+                    serde_json::to_string(&directive.args).unwrap(),
+                );
+            }
         };
         pc
     }
@@ -134,7 +215,7 @@ impl From<Directive<Apache>> for VirtualHost {
                     _ => {}
                 });
         });
-        Self::default()
+        virtual_host
     }
 }
 
