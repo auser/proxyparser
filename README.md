@@ -19,4 +19,8 @@ To use ProxyParser, run the following command in your terminal:
 proxyparser --dir /path/to/config/dir --ext nginx --verbose 1 --print
 ```
 
-This command will parse all Nginx configuration files in the specified directory and print the parsed configuration commands to the console.
+This command will parse all Apache configuration files in the specified directory and print the parsed configuration commands to the console.
+
+Optionally, you can use the `--print` flag to print the parsed `etcd` commands to the console.
+
+Run `proxyparser --help` to see the full list of available options.

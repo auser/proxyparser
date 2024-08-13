@@ -16,7 +16,11 @@ pub struct Cli {
     #[arg(short, long, default_value = "0")]
     pub verbose: Option<u8>,
 
-    #[arg(short, long, help = "The path to the config files")]
+    #[arg(
+        value_name = "starting_dir",
+        help = "The path to the config files",
+        index = 1
+    )]
     pub starting_dir: PathBuf,
 
     #[arg(
@@ -32,6 +36,14 @@ pub struct Cli {
 
     #[arg(short, long, help = "Print the config commands")]
     pub print_commands: bool,
+
+    #[arg(
+        short,
+        long,
+        help = "Type of the config to parse",
+        default_value = "etcd"
+    )]
+    pub config_type: String,
 }
 
 pub fn exec() {
@@ -68,7 +80,7 @@ pub fn exec() {
     // }
 
     if args.print_commands {
-        print_commands(configs);
+        print_commands(configs, &args.config_type);
     }
 }
 
@@ -91,8 +103,11 @@ fn process(file_path: PathBuf) -> ProxyConfig {
     configs
 }
 
-fn print_commands(configs: ProxyConfig) {
+fn print_commands(configs: ProxyConfig, config_type: &str) {
     for virtual_host in configs.virtual_hosts {
-        println!("{}", virtual_host.to_etcd_config());
+        match config_type {
+            "etcd" => println!("{}", virtual_host.to_etcd_config()),
+            _ => println!("Unknown config type"),
+        }
     }
 }
