@@ -24,3 +24,11 @@ This command will parse all Apache configuration files in the specified director
 Optionally, you can use the `--print` flag to print the parsed `etcd` commands to the console.
 
 Run `proxyparser --help` to see the full list of available options.
+
+## Installation
+
+Install from cli:
+
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.0.5/cargo-dist-v0.0.5-installer.sh | sh
+```

@@ -2,6 +2,16 @@
 name = "proxyparser"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/auser/proxyparser"
+authors = ["Ari Lerner <me@ari.io>"]
+description = "A tool for parsing proxy files and generating nginx configs"
+homepage = "https://github.com/auser/proxyparser"
+
+[package.metadata.wix]
+upgrade-guid = "1A9995D8-EDBF-441E-97A6-8229E00A9AA7"
+path-guid = "28379336-036D-4563-8BD5-CD3D1D9B6265"
+license = false
+eula = false
 
 [dependencies]
 anyhow = "1.0.86"
@@ -26,7 +36,18 @@ lto = "thin"
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
 cargo-dist-version = "0.17.0"
+# CI backends to support
+ci = "github"
 # The installers to generate for each app
-installers = []
+installers = ["shell", "powershell", "homebrew", "msi"]
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+targets = [
+  "aarch64-apple-darwin",
+  "x86_64-apple-darwin",
+  "x86_64-unknown-linux-gnu",
+  "x86_64-pc-windows-msvc",
+]
+# Publish jobs to run in CI
+pr-run-mode = "plan"
+# Whether to install an updater program
+install-updater = true
