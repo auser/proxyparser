@@ -116,6 +116,7 @@ fn print_commands(configs: &ProxyConfig, config_type: &str) {
             "etcd" => println!("{}", virtual_host.to_etcd_config()),
             _ => println!("Unknown config type"),
         }
+        println!("\n");
     }
 }
 
