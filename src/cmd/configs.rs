@@ -90,31 +90,75 @@ impl VirtualHost {
         //         rewrite_rule.replacement
         //     ));
         // }
+        // Add middleware
+        config.push_str(&format!(
+            "etcdctl put traefik/http/routers/{dashed_str}/middlewares/0 https-only\n",
+        ));
+        config.push_str(&format!(
+            "etcdctl put traefik/http/routers/{dashed_str}/middlewares/1 follow-redirects\n",
+        ));
+
         config.push_str(&format!(
             "etcdctl put traefik/http/routers/{dashed_str}/service \"{dashed_str}\"\n",
         ));
         let host = self.host.clone();
         let (host, port) = host.split_once(":").unwrap_or((&self.host, "80"));
-        config.push_str(&format!(
-            "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/url \"{}\"\n",
-            host,
-        ));
-        config.push_str(&format!(
-            "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/port {port}\n"
-        ));
+        let mut url = format!("http://{}", host);
         match port {
             "80" => {
                 config.push_str(&format!(
-                    "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/scheme \"http\"",
+                    "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/scheme \"http\"\n",
                 ));
+
+                // config.push_str(&format!(
+                //     "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/url \"http://{}\"\n",
+                //     host,
+                // ));
             }
             "443" => {
                 config.push_str(&format!(
-                    "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/scheme \"https\"",
+                    "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/scheme \"https\"\n",
                 ));
+                url = format!("https://{}", host);
             }
             _ => {}
         }
+        config.push_str(&format!(
+            "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/url \"{}\"\n",
+            url,
+        ));
+
+        config.push_str(&format!(
+            "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/port {port}\n"
+        ));
+
+        config.push_str(&format!(
+            "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/responseForwarding/flushInterval \"100ms\"\n"
+        ));
+        // Server transports
+        let transport_name = format!("{dashed_str}-transport");
+        // Configure the server transport
+        config.push_str(&format!(
+            "etcdctl put traefik/http/serversTransports/{transport_name}/insecureSkipVerify \"true\"\n",
+        ));
+        config.push_str(&format!(
+            "etcdctl put traefik/http/serversTransports/{transport_name}/forwardingTimeouts/responseHeaderTimeout \"30s\"\n",
+        ));
+        config.push_str(&format!(
+            "etcdctl put traefik/http/serversTransports/{transport_name}/forwardingTimeouts/idleConnTimeout \"30s\"\n",
+        ));
+
+        // Set the serverTransport
+        config.push_str(&format!(
+            "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/serversTransport \"{transport_name}\"\n",
+        ));
+
+        // config.push_str(&format!(
+        //     "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/serversTransport/forwardingTimeouts/responseHeaderTimeout \"30s\"\n"
+        // ));
+        // config.push_str(&format!(
+        //     "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/serversTransport/insecureSkipVerify true\n"
+        // ));
 
         config
     }

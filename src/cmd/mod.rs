@@ -124,4 +124,5 @@ fn print_commands(configs: &ProxyConfig, config_type: &str) {
 fn print_middleware_commands(_configs: &ProxyConfig) {
     println!("etcdctl put traefik.http.middlewares.secured.chain.middlewares https-only");
     println!("etcdctl put traefik/http/middlewares/https-only/redirectScheme/scheme https");
+    println!("etcdctl put traefik/http/middlewares/follow-redirects/redirectregex/permanent true");
 }
