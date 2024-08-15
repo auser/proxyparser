@@ -84,6 +84,7 @@ pub fn exec() {
 
     if args.print_middleware_commands {
         print_middleware_commands(&configs);
+        println!("\n");
     }
 
     if args.print_commands {
