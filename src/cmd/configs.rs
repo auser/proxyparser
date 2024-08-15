@@ -72,25 +72,50 @@ impl VirtualHost {
             return config;
         }
         let name = self.server_name.clone();
+        let name = name.replace("http://", "");
+        let name = name.replace("https://", "");
+        let dashed_str = name.replace(".", "-");
         config.push_str(&format!(
-            "etcdctl put traefik/http/routers/{name}/rule \"Host(`{name}`)\"\n"
+            "etcdctl put traefik/http/routers/{dashed_str}/rule \"Host(\\`{name}\\`)\"\n"
         ));
         config.push_str(&format!(
-            "etcdctl put traefik/http/routers/{name}/tls \"true\"\n"
+            "etcdctl put traefik/http/routers/{dashed_str}/tls \"true\"\n"
         ));
         config.push_str(&format!(
-            "etcdctl put traefik/http/routers/{name}/entryPoints/0 websecure\n"
+            "etcdctl put traefik/http/routers/{dashed_str}/entryPoints/0 websecure\n"
         ));
-        for rewrite_rule in &self.rewrite_rules {
-            config.push_str(&format!(
-                "etcdctl put traefik/http/routers/{name}/rule \"{}\"\n",
-                rewrite_rule.replacement
-            ));
+        // for (index, rewrite_rule) in self.rewrite_rules.iter().enumerate() {
+        //     config.push_str(&format!(
+        //         "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/{index}/url \"{}\"\n",
+        //         rewrite_rule.replacement
+        //     ));
+        // }
+        config.push_str(&format!(
+            "etcdctl put traefik/http/routers/{dashed_str}/service \"{dashed_str}\"\n",
+        ));
+        let host = self.host.clone();
+        let (host, port) = host.split_once(":").unwrap_or((&self.host, "80"));
+        config.push_str(&format!(
+            "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/url \"{}\"\n",
+            host,
+        ));
+        config.push_str(&format!(
+            "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/port {port}\n"
+        ));
+        match port {
+            "80" => {
+                config.push_str(&format!(
+                    "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/scheme \"http\"",
+                ));
+            }
+            "443" => {
+                config.push_str(&format!(
+                    "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/scheme \"https\"",
+                ));
+            }
+            _ => {}
         }
-        config.push_str(&format!(
-            "etcdctl put traefik/http/services/{name}/loadbalancer/servers/0/url \"{}\"\n",
-            self.host,
-        ));
+
         config
     }
 }

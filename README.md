@@ -27,8 +27,8 @@ Run `proxyparser --help` to see the full list of available options.
 
 ## Installation
 
-Install from cli:
+Install from shell:
 
 ```bash
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.0.5/cargo-dist-v0.0.5-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/auser/proxyparser/releases/download/v0.0.1/proxyparser-v0.0.1-installer.sh | sh
 ```

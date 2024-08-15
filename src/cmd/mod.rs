@@ -34,6 +34,9 @@ pub struct Cli {
     #[arg(short, long, help = "Interactive mode")]
     pub interactive: bool,
 
+    #[arg(short, long, help = "Print the middleware commands for traefik")]
+    pub print_middleware_commands: bool,
+
     #[arg(short, long, help = "Print the config commands")]
     pub print_commands: bool,
 
@@ -79,8 +82,12 @@ pub fn exec() {
     //     let _ = interact::exec(configs);
     // }
 
+    if args.print_middleware_commands {
+        print_middleware_commands(&configs);
+    }
+
     if args.print_commands {
-        print_commands(configs, &args.config_type);
+        print_commands(&configs, &args.config_type);
     }
 }
 
@@ -103,11 +110,16 @@ fn process(file_path: PathBuf) -> ProxyConfig {
     configs
 }
 
-fn print_commands(configs: ProxyConfig, config_type: &str) {
-    for virtual_host in configs.virtual_hosts {
+fn print_commands(configs: &ProxyConfig, config_type: &str) {
+    for virtual_host in &configs.virtual_hosts {
         match config_type {
             "etcd" => println!("{}", virtual_host.to_etcd_config()),
             _ => println!("Unknown config type"),
         }
     }
+}
+
+fn print_middleware_commands(_configs: &ProxyConfig) {
+    println!("ecd put traefik.http.middlewares.secured.chain.middlewares https-only");
+    println!("ecd put traefik/http/middlewares/https-only/redirectScheme/scheme https");
 }
