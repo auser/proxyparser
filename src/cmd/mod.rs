@@ -34,7 +34,7 @@ pub struct Cli {
     #[arg(short, long, help = "Interactive mode")]
     pub interactive: bool,
 
-    #[arg(short, long, help = "Print the middleware commands for traefik")]
+    #[arg(short('m'), long, help = "Print the middleware commands for traefik")]
     pub print_middleware_commands: bool,
 
     #[arg(short, long, help = "Print the config commands")]
@@ -120,6 +120,6 @@ fn print_commands(configs: &ProxyConfig, config_type: &str) {
 }
 
 fn print_middleware_commands(_configs: &ProxyConfig) {
-    println!("ecd put traefik.http.middlewares.secured.chain.middlewares https-only");
-    println!("ecd put traefik/http/middlewares/https-only/redirectScheme/scheme https");
+    println!("etcdctl put traefik.http.middlewares.secured.chain.middlewares https-only");
+    println!("etcdctl put traefik/http/middlewares/https-only/redirectScheme/scheme https");
 }

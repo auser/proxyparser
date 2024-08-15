@@ -30,5 +30,5 @@ Run `proxyparser --help` to see the full list of available options.
 Install from shell:
 
 ```bash
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/auser/proxyparser/releases/download/v0.0.1/proxyparser-v0.0.1-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/auser/proxyparser/releases/download/v0.1.1/proxyparser-v0.1.1-installer.sh | sh
 ```
