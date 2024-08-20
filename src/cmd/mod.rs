@@ -125,4 +125,17 @@ fn print_middleware_commands(_configs: &ProxyConfig) {
     println!("etcdctl put traefik.http.middlewares.secured.chain.middlewares https-only");
     println!("etcdctl put traefik/http/middlewares/https-only/redirectScheme/scheme https");
     println!("etcdctl put traefik/http/middlewares/follow-redirects/redirectregex/permanent true");
+    println!("etcdctl put traefik.http.middlewares.secured.chain.middlewares https-only");
+    println!("etcdctl put traefik/http/middlewares/https-only/redirectScheme/scheme https");
+    println!("etcdctl put traefik/http/middlewares/https-only/redirectScheme/permanent true");
+    println!("etcdctl put traefik/http/middlewares/https-only/redirectScheme/port 443");
+    println!("etcdctl put traefik/http/middlewares/follow-redirects/redirectregex/permanent true");
+
+    println!("etcdctl put traefik/http/middlewares/enable-headers/headers/accessControlAllowMethods \"GET, POST, OPTIONS, PUT, DELETE\"");
+    println!("etcdctl put traefik/http/middlewares/enable-headers/headers/accessControlAllowHeaders \"Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With\"");
+    println!("etcdctl put traefik/http/middlewares/enable-headers/headers/accessControlAllowOriginList \"*\"");
+    println!(
+        "etcdctl put traefik/http/middlewares/enable-headers/headers/accessControlMaxAge \"3600\""
+    );
+    println!("etcdctl put traefik/http/middlewares/enable-headers/headers/addVaryHeader true");
 }
