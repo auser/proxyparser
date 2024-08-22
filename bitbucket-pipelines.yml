@@ -9,7 +9,7 @@ pipelines:
     - step:
         name: Create Release and Installer
         image: rust:latest
-        trigger: tag
+        trigger: automatic
         script:
           # Install cargo-dist
           - cargo install cargo-dist
