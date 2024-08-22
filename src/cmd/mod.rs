@@ -3,10 +3,9 @@ use std::{collections::HashMap, ffi::OsStr, path::PathBuf};
 use clap::Parser;
 use log::info;
 use misc_conf::apache::Apache;
-use serde_json::json;
 
 use crate::{
-    cmd::configs::{ProxyConfig, VirtualHost, VirtualHostBuilder},
+    cmd::configs::{ProxyConfig, VirtualHostBuilder},
     error::ParserResult,
 };
 
