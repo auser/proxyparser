@@ -1,0 +1,56 @@
+pipelines:
+  default:
+    - step:
+        name: Build and Test
+        image: rust:latest
+        script:
+          - cargo build --all-features
+          - cargo test
+    - step:
+        name: Create Release and Installer
+        image: rust:latest
+        trigger: tag
+        script:
+          # Install cargo-dist
+          - cargo install cargo-dist
+          # Build the release
+          - cargo dist build
+          # Create installer script
+          - |
+            cat << EOF > installer.sh
+            #!/bin/sh
+            set -e
+            RELEASE_TAG=\${RELEASE_TAG:-$BITBUCKET_TAG}
+            BITBUCKET_WORKSPACE=$BITBUCKET_WORKSPACE
+            BITBUCKET_REPO_SLUG=$BITBUCKET_REPO_SLUG
+
+            # Download the appropriate binary for the user's system
+            download_url="https://api.bitbucket.org/2.0/repositories/\$BITBUCKET_WORKSPACE/\$BITBUCKET_REPO_SLUG/downloads/\$RELEASE_TAG/\$(uname -s)-\$(uname -m).tar.gz"
+            curl -L -o release.tar.gz "\$download_url"
+
+            # Extract and install
+            tar -xzf release.tar.gz
+            chmod +x your_binary_name
+            sudo mv your_binary_name /usr/local/bin/
+
+            echo "Installation complete. You can now use 'proxyparser' command."
+            EOF
+          - chmod +x installer.sh
+          # Upload artifacts
+          - pipe: atlassian/bitbucket-upload-file:0.3.2
+            variables:
+              BITBUCKET_USERNAME: $BITBUCKET_USERNAME
+              BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD
+              FILENAME: 'target/dist/*'
+          - pipe: atlassian/bitbucket-upload-file:0.3.2
+            variables:
+              BITBUCKET_USERNAME: $BITBUCKET_USERNAME
+              BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD
+              FILENAME: 'installer.sh'
+        artifacts:
+          - target/dist/**
+          - installer.sh
+
+definitions:
+  caches:
+    cargo: ~/.cargo
