@@ -50,6 +50,114 @@ pub struct VirtualHost {
     log_level: String,
 }
 
+impl VirtualHost {
+    pub fn builder() -> VirtualHostBuilder {
+        VirtualHostBuilder::default()
+    }
+}
+
+#[derive(Default)]
+pub struct VirtualHostBuilder {
+    host: String,
+    server_name: String,
+    server_aliases: Vec<String>,
+    document_root: String,
+    custom_log: String,
+    locations: Vec<Location>,
+    rewrite_engine: bool,
+    rewrite_rules: Vec<RewriteRule>,
+    ssl_config: SslConfig,
+    env: HashMap<String, String>,
+    headers: HashMap<String, Vec<String>>,
+    listen: Vec<String>,
+    log_level: String,
+}
+
+impl VirtualHostBuilder {
+    pub fn host(mut self, host: String) -> Self {
+        self.host = host;
+        self
+    }
+
+    pub fn server_name(mut self, server_name: String) -> Self {
+        self.server_name = server_name;
+        self
+    }
+
+    pub fn server_aliases(mut self, server_aliases: Vec<String>) -> Self {
+        self.server_aliases = server_aliases;
+        self
+    }
+
+    pub fn document_root(mut self, document_root: String) -> Self {
+        self.document_root = document_root;
+        self
+    }
+
+    pub fn custom_log(mut self, custom_log: String) -> Self {
+        self.custom_log = custom_log;
+        self
+    }
+
+    pub fn locations(mut self, locations: Vec<Location>) -> Self {
+        self.locations = locations;
+        self
+    }
+
+    pub fn rewrite_engine(mut self, rewrite_engine: bool) -> Self {
+        self.rewrite_engine = rewrite_engine;
+        self
+    }
+
+    pub fn rewrite_rules(mut self, rewrite_rules: Vec<RewriteRule>) -> Self {
+        self.rewrite_rules = rewrite_rules;
+        self
+    }
+
+    pub fn ssl_config(mut self, ssl_config: SslConfig) -> Self {
+        self.ssl_config = ssl_config;
+        self
+    }
+
+    pub fn env(mut self, env: HashMap<String, String>) -> Self {
+        self.env = env;
+        self
+    }
+
+    pub fn headers(mut self, headers: HashMap<String, Vec<String>>) -> Self {
+        self.headers = headers;
+        self
+    }
+
+    pub fn listen(mut self, listen: Vec<String>) -> Self {
+        self.listen = listen;
+        self
+    }
+
+    pub fn log_level(mut self, log_level: String) -> Self {
+        self.log_level = log_level;
+        self
+    }
+
+    pub fn build(self) -> VirtualHost {
+        VirtualHost {
+            host: self.host,
+            server_name: self.server_name,
+            server_aliases: self.server_aliases,
+            document_root: self.document_root,
+            custom_log: self.custom_log,
+            locations: self.locations,
+            rewrite_engine: self.rewrite_engine,
+            rewrite_rules: self.rewrite_rules,
+            ssl_config: self.ssl_config,
+            env: self.env,
+            headers: self.headers,
+            listen: self.listen,
+            log_level: self.log_level,
+        }
+    }
+}
+
 impl From<VirtualHost> for serde_json::Value {
     fn from(virtual_host: VirtualHost) -> Self {
         serde_json::to_value(virtual_host.server_name).unwrap()
@@ -61,6 +169,16 @@ impl From<VirtualHost> for serde_json::Value {
         //     "custom_log": virtual_host.custom_log,
         //     "locations": virtual_host.locations,
         // })
+    }
+}
+
+impl From<&HashMap<String, String>> for VirtualHost {
+    fn from(row_values: &HashMap<String, String>) -> Self {
+        VirtualHostBuilder::default()
+            .host(row_values.get("Host").unwrap().to_string())
+            .server_name(row_values.get("Server Name").unwrap().to_string())
+            .document_root(row_values.get("Document Root").unwrap().to_string())
+            .build()
     }
 }
 
@@ -121,7 +239,9 @@ impl VirtualHost {
                 ));
                 url = format!("https://{}", host);
             }
-            _ => {}
+            _ => {
+                url = format!("http://{}", host);
+            }
         }
         config.push_str(&format!(
             "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/url \"{}\"\n",

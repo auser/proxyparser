@@ -1,10 +1,14 @@
-use std::{ffi::OsStr, path::PathBuf};
+use std::{collections::HashMap, ffi::OsStr, path::PathBuf};
 
 use clap::Parser;
 use log::info;
 use misc_conf::apache::Apache;
+use serde_json::json;
 
-use crate::cmd::configs::ProxyConfig;
+use crate::{
+    cmd::configs::{ProxyConfig, VirtualHost, VirtualHostBuilder},
+    error::ParserResult,
+};
 
 pub mod configs;
 mod interact;
@@ -49,7 +53,7 @@ pub struct Cli {
     pub config_type: String,
 }
 
-pub fn exec() {
+pub fn exec() -> ParserResult<()> {
     let args: Cli = Cli::parse();
     logging::init_logger(args.verbose);
 
@@ -71,7 +75,8 @@ pub fn exec() {
             .extension()
             .map_or(false, |ext| ext == extension)
         {
-            let pc = process(entry.path().to_path_buf());
+            println!("Processing file: {:?}", entry.path());
+            let pc = process(entry.path().to_path_buf())?;
             pc.virtual_hosts.into_iter().for_each(|virtual_host| {
                 configs.add_virtual_host(virtual_host);
             });
@@ -90,15 +95,29 @@ pub fn exec() {
     if args.print_commands {
         print_commands(&configs, &args.config_type);
     }
+
+    Ok(())
 }
 
-fn process(file_path: PathBuf) -> ProxyConfig {
+fn process(file_path: PathBuf) -> ParserResult<ProxyConfig> {
+    info!("Processing file: {:?}", file_path);
+    let extension: &OsStr = file_path.extension().unwrap_or(OsStr::new("conf"));
+    let mut configs = ProxyConfig::default();
+
+    if extension == "conf" {
+        process_apache(file_path, &mut configs)?;
+    } else if extension == "xlsx" {
+        process_xlsx(file_path, &mut configs)?;
+    }
+
+    Ok(configs)
+}
+
+fn process_apache(file_path: PathBuf, configs: &mut ProxyConfig) -> ParserResult<()> {
     info!("Processing file: {:?}", file_path);
     use misc_conf::ast::*;
 
     let data = std::fs::read(file_path).expect("unable to read file");
-
-    let mut configs = ProxyConfig::default();
     if let Ok(res) = Directive::<Apache>::parse(&data) {
         for directive in res {
             let pc = ProxyConfig::from(directive);
@@ -108,7 +127,67 @@ fn process(file_path: PathBuf) -> ProxyConfig {
         }
     }
 
-    configs
+    Ok(())
+}
+
+fn process_xlsx(file_path: PathBuf, configs: &mut ProxyConfig) -> ParserResult<()> {
+    info!("Processing file: {:?}", file_path);
+    use calamine::{open_workbook, Reader, Xlsx};
+    let mut workbook: Xlsx<_> = open_workbook(file_path).expect("unable to read file");
+
+    let sheet = workbook
+        .worksheet_range("Sheet1")
+        .expect("unable to read file");
+
+    let headers = sheet.rows().next().unwrap();
+    let headers = headers
+        .iter()
+        .map(|h| h.to_string().to_lowercase())
+        .collect::<Vec<String>>();
+
+    for row in sheet.rows() {
+        let row_map = HashMap::new();
+        let row_values = row
+            .iter()
+            .zip(headers.iter())
+            // .map(|(h, header)| json!({ header: h.to_string() }))
+            .fold(row_map, |mut row_map, (h, header)| {
+                let header = header.trim().to_string().to_lowercase();
+                let value = h.to_string().to_lowercase();
+                row_map.insert(header, value);
+                row_map
+            });
+
+        if row_values.contains_key("needed for traefik") {
+            let needed_for_traefik = row_values
+                .get("needed for traefik")
+                .expect("missing needed for traefik");
+            if needed_for_traefik.to_lowercase() == "y" {
+                let hostname = row_values.get("host name").unwrap().trim().to_string();
+                let host = row_values
+                    .get("blue webproxy ip")
+                    .unwrap()
+                    .trim()
+                    .to_string();
+                let virtual_host = VirtualHostBuilder::default()
+                    .host(host.clone())
+                    .server_name(hostname.clone())
+                    .build();
+                // dbg!("virtual_host {:#?}", virtual_host);
+                configs.add_virtual_host(virtual_host);
+            }
+        }
+
+        // let virtual_host = VirtualHostBuilder::default()
+        //     .host(row_values.get("Host").unwrap().to_string())
+        //     .server_name(row_values.get("Server Name").unwrap().to_string())
+        //     .document_root(row_values.get("Document Root").unwrap().to_string())
+        //     .build();
+
+        // configs.add_virtual_host(virtual_host);
+    }
+
+    Ok(())
 }
 
 fn print_commands(configs: &ProxyConfig, config_type: &str) {

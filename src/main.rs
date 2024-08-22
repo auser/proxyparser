@@ -1,5 +1,5 @@
 use proxyparser::exec;
 
 fn main() {
-    exec();
+    exec().expect("failed to execute");
 }
