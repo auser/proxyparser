@@ -32,3 +32,10 @@ Install from shell:
 ```bash
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/auser/proxyparser/releases/download/v0.1.1/proxyparser-v0.1.1-installer.sh | sh
 ```
+
+Or from bitbucket:
+
+```bash
+# https://bitbucket.org/financialpayments/proxy-rules/src/main/
+curl -u USERNAME:APP_PASSWORD https://api.bitbucket.org/2.0/repositories/financialpayments/proxy-rules/downloads/v0.1.3/installer.sh | sh
+```
