@@ -3,6 +3,7 @@ use std::{collections::HashMap, fmt::Display};
 use log::debug;
 use misc_conf::{apache::Apache, ast::Directive};
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ProxyConfig {
@@ -183,6 +184,13 @@ impl From<&HashMap<String, String>> for VirtualHost {
 }
 
 impl VirtualHost {
+    pub fn get_host_and_port(&self) -> (String, String, String) {
+        let host = self.host.clone();
+        let (host, port) = host.split_once(":").unwrap_or((&self.host, "80"));
+        let url = format!("http://{}", host);
+        (host.to_string(), port.to_string(), url.to_string())
+    }
+
     pub fn to_etcd_config(&self) -> String {
         let mut config = String::new();
         debug!("VirtualHost: {:#?}", self);
@@ -202,12 +210,6 @@ impl VirtualHost {
         config.push_str(&format!(
             "etcdctl put traefik/http/routers/{dashed_str}/entryPoints/0 websecure\n"
         ));
-        // for (index, rewrite_rule) in self.rewrite_rules.iter().enumerate() {
-        //     config.push_str(&format!(
-        //         "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/{index}/url \"{}\"\n",
-        //         rewrite_rule.replacement
-        //     ));
-        // }
         // Add middleware
         config.push_str(&format!(
             "etcdctl put traefik/http/routers/{dashed_str}/middlewares/0 https-only\n",
@@ -219,19 +221,15 @@ impl VirtualHost {
         config.push_str(&format!(
             "etcdctl put traefik/http/routers/{dashed_str}/service \"{dashed_str}\"\n",
         ));
-        let host = self.host.clone();
-        let (host, port) = host.split_once(":").unwrap_or((&self.host, "80"));
-        let mut url = format!("http://{}", host);
-        match port {
+        // let host = self.host.clone();
+        // let (host, port) = host.split_once(":").unwrap_or((&self.host, "80"));
+        // let mut url = format!("http://{}", host);
+        let (host, port, mut url) = self.get_host_and_port();
+        match port.as_str() {
             "80" => {
                 config.push_str(&format!(
                     "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/scheme \"http\"\n",
                 ));
-
-                // config.push_str(&format!(
-                //     "etcdctl put traefik/http/services/{dashed_str}/loadbalancer/servers/0/url \"http://{}\"\n",
-                //     host,
-                // ));
             }
             "443" => {
                 config.push_str(&format!(
@@ -281,6 +279,26 @@ impl VirtualHost {
         // ));
 
         config
+    }
+
+    pub fn to_json_config(&self) -> Option<Value> {
+        let name = self.server_name.clone();
+        let name = name.replace("http://", "");
+        let name = name.replace("https://", "");
+        debug!("name: {}", name.len());
+        if name.is_empty() {
+            return None;
+        }
+        // let dashed_str = name.replace(".", "-");
+        let (_host, port, url) = self.get_host_and_port();
+        Some(json!({
+            "host": name,
+            "port": port.parse::<u16>().unwrap(),
+            "url": url,
+            "server_aliases": self.server_aliases,
+            "document_root": self.document_root,
+            "custom_log": self.custom_log,
+        }))
     }
 }
 

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ffi::OsStr, path::PathBuf};
 
 use clap::Parser;
-use log::info;
+use log::{debug, info};
 use misc_conf::apache::Apache;
 
 use crate::{
@@ -74,7 +74,7 @@ pub fn exec() -> ParserResult<()> {
             .extension()
             .map_or(false, |ext| ext == extension)
         {
-            println!("Processing file: {:?}", entry.path());
+            debug!("Processing file: {:?}", entry.path());
             let pc = process(entry.path().to_path_buf())?;
             pc.virtual_hosts.into_iter().for_each(|virtual_host| {
                 configs.add_virtual_host(virtual_host);
@@ -190,12 +190,22 @@ fn process_xlsx(file_path: PathBuf, configs: &mut ProxyConfig) -> ParserResult<(
 }
 
 fn print_commands(configs: &ProxyConfig, config_type: &str) {
+    let mut json_configs = Vec::new();
     for virtual_host in &configs.virtual_hosts {
         match config_type {
-            "etcd" => println!("{}", virtual_host.to_etcd_config()),
+            "etcd" => println!("{}\n", virtual_host.to_etcd_config()),
+            "json" => {
+                let json_config = virtual_host.to_json_config();
+                if let Some(json_config) = json_config {
+                    json_configs.push(json_config);
+                }
+            }
             _ => println!("Unknown config type"),
         }
-        println!("\n");
+    }
+    if config_type == "json" {
+        let j = serde_json::json!(json_configs);
+        println!("{}", j.to_string());
     }
 }
 
