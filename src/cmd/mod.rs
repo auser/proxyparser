@@ -195,8 +195,7 @@ fn print_commands(configs: &ProxyConfig, config_type: &str) {
         match config_type {
             "etcd" => println!("{}\n", virtual_host.to_etcd_config()),
             "json" => {
-                let json_config = virtual_host.to_json_config();
-                if let Some(json_config) = json_config {
+                if let Some(json_config) = virtual_host.to_json_config() {
                     json_configs.push(json_config);
                 }
             }

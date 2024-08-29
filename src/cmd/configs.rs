@@ -187,7 +187,14 @@ impl VirtualHost {
     pub fn get_host_and_port(&self) -> (String, String, String) {
         let host = self.host.clone();
         let (host, port) = host.split_once(":").unwrap_or((&self.host, "80"));
-        let url = format!("http://{}", host);
+        let url = match port {
+            "443" => {
+                format!("https://{}", host)
+            }
+            _ => {
+                format!("http://{}", host)
+            }
+        };
         (host.to_string(), port.to_string(), url.to_string())
     }
 
@@ -290,11 +297,16 @@ impl VirtualHost {
             return None;
         }
         // let dashed_str = name.replace(".", "-");
-        let (_host, port, url) = self.get_host_and_port();
+        let (host, port, url) = self.get_host_and_port();
         Some(json!({
-            "host": name,
-            "port": port.parse::<u16>().unwrap(),
-            "url": url,
+            "name": name,
+            "backends": [
+                {
+                    "port": port.parse::<u16>().unwrap(),
+                    "url": url,
+                    "ip": host,
+                }
+            ],
             "server_aliases": self.server_aliases,
             "document_root": self.document_root,
             "custom_log": self.custom_log,
